@@ -1,7 +1,6 @@
-package rapidRoot
+package rapidroot
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -14,6 +13,9 @@ func fileExists(path string) bool {
 }
 
 func getFunctionName(fn interface{}) string {
+	if fn == nil {
+		return "nil"
+	}
 	fullName := strings.Split(runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), ".")
 	return fullName[len(fullName)-1]
 }
@@ -29,13 +31,21 @@ func contains(slice []string, val string) bool {
 
 func cleanPath(path string) string {
 	if path == "" {
-		panic(fmt.Errorf("path can't be empty string"))
+		return "/"
 	}
 	if path[0] != '/' {
-		panic(fmt.Errorf("path must start with '/', wrong path: %s", path))
+		path = "/" + path
 	}
 	if path[len(path)-1] == '/' {
 		path = path[:len(path)-1]
 	}
 	return path
+}
+
+func isDynamicSegment(segment string) bool {
+	return strings.HasPrefix(segment, "$")
+}
+
+func isLastSegment(index int, segments []string) bool {
+	return index == len(segments)-1
 }
