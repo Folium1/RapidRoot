@@ -1,4 +1,4 @@
-package rapidRoot
+package rapidroot
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type Request struct {
 	// used to prevent usage of the shared memory of the data by multiple goroutines
 	mu *sync.Mutex
 
-	// used to save data in Request, and then get it from then next handler
+	// used to save data in Request, and then it can be used in other handlers or middlewares
 	data map[string]any
 
 	// data from r.Req.URL.Query().
@@ -32,12 +32,49 @@ type Request struct {
 	isAborted bool
 }
 
-func newReq(w http.ResponseWriter, req *http.Request) *Request {
-	return &Request{
-		Writer:      w,
+var requestPool sync.Pool
+
+func init() {
+	requestPool = sync.Pool{
+		New: func() interface{} {
+			return &Request{}
+		},
+	}
+}
+
+// GetRequest retrieves a Request from the sync pool.
+func getRequest(w http.ResponseWriter, req *http.Request) *Request {
+	request := requestPool.Get().(*Request)
+	request.Writer = w
+	request.Req = req
+	request.data = make(map[string]any)
+	request.queryValues = req.URL.Query()
+
+	return request
+}
+
+func (r *Request) reset() {
+	r.Writer = nil
+	r.Req = nil
+	r.data = nil
+	r.queryValues = nil
+	r.cookie = nil
+	r.handlerName = ""
+	r.isAborted = false
+}
+
+// ReleaseRequest releases a Request back to the sync pool.
+func releaseRequest(request *Request) {
+	request.reset()
+	requestPool.Put(request)
+}
+func newRequest(writer http.ResponseWriter, req *http.Request) *Request {
+	// Initialize a new Request struct
+	newRequest := &Request{
+		Writer:      writer,
 		Req:         req,
 		mu:          new(sync.Mutex),
-		data:        make(map[string]any),
+		data:        make(map[string]interface{}),
 		queryValues: req.URL.Query(),
 		cookie: &cookies{
 			defaults: &http.Cookie{
@@ -45,10 +82,13 @@ func newReq(w http.ResponseWriter, req *http.Request) *Request {
 				Secure:   true,
 				SameSite: http.SameSiteStrictMode,
 				Path:     "/",
-			}},
+			},
+		},
 		handlerName: "",
 		isAborted:   false,
 	}
+
+	return newRequest
 }
 
 /*
@@ -77,9 +117,8 @@ func (r *Request) SetStatus(code int) {
 	r.Writer.WriteHeader(code)
 }
 
-// PostFormVal returns value from post form.
-func (r *Request) PostFormVal(key string) string {
-	return r.Req.FormValue(key)
+func (r *Request) GetStatus() int {
+	return r.Writer.(*responseCodeWrapper).statusCode
 }
 
 // QueryValue returns value from query.
@@ -95,6 +134,11 @@ func (r *Request) QueryValues() url.Values {
 // PostFormValues returns all values from post form.
 func (r *Request) PostFormValues() url.Values {
 	return r.Req.PostForm
+}
+
+// PostFormVal returns value from post form.
+func (r *Request) PostFormVal(key string) string {
+	return r.Req.FormValue(key)
 }
 
 // IsAborted returns true if request is aborted.
@@ -116,12 +160,8 @@ func (r *Request) Abort() {
 // Redirect redirects request to another url.
 // Only codes from 300 to 308 are valid.
 func (r *Request) Redirect(code int, url string) {
-	if code >= 300 && code <= 308 {
-		http.Redirect(r.Writer, r.Req, url, code)
-		return
-	}
-	log.error(fmt.Sprintf("Bad code for redirection: %d", code), r.handlerName)
-	r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
+	http.Redirect(r.Writer, r.Req, url, code)
+	return
 }
 
 // ERROR return an error with status code.
@@ -139,27 +179,28 @@ func (r *Request) XML(code int, data any) {
 	r.writeXML(code, data)
 }
 
+// XMLIndent parses data to xml format and sends response with a provided code.
 func (r *Request) XMLIndent(code int, data any, prefix, indent string) {
 	r.writeXMLIndent(code, data, prefix, indent)
 }
 
-// HTML parses data to html format and sends response with a provided code.
-// If there is no file with such name, will abort with 500 error status code.
+// HTML parses data to HTML format and sends a response with the provided code.
+// If there is no file with such name, it will abort with a 500 error status code.
 func (r *Request) HTML(code int, name string, data any) {
-	if fileExists(name) {
-		tmpl, err := template.ParseFiles(name)
-		if err != nil {
-			log.error(fmt.Sprintf("failed to parse html file: %s, err: %s",
-				name, err.Error()), r.handlerName)
-			r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
-			return
-		}
-		r.writeHTML(code, *tmpl, data)
-	} else {
+	if !fileExists(name) {
 		r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
 		log.error(fmt.Sprintf("File: %s doesn't exist", name), r.handlerName)
 		return
 	}
+
+	tmpl, err := template.ParseFiles(name)
+	if err != nil {
+		log.error(fmt.Sprintf("Failed to parse HTML file: %s, err: %s", name, err.Error()), r.handlerName)
+		r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
+		return
+	}
+
+	r.writeHTML(code, *tmpl, data)
 }
 
 // HTMLTemplate same as HTML, but you can put your html template to execute.
