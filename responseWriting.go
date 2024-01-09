@@ -1,4 +1,4 @@
-package rapidRoot
+package rapidroot
 
 import (
 	"bytes"
@@ -109,23 +109,35 @@ func (r *Request) writeBINARY(code int, data []byte) {
 	}
 }
 
-func (r *Request) writeFILE(code int, name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (req *Request) writeFILE(code int, name string) {
+	req.mu.Lock()
+	defer req.mu.Unlock()
 
-	r.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", name))
-	r.Writer.Header().Set("Content-Type", r.Req.Header.Get("Content-Type"))
+	req.Writer.Header().Set(
+		"Content-Disposition",
+		fmt.Sprintf("attachment; filename=%s", name),
+	)
+
+	req.Writer.Header().Set(
+		"Content-Type",
+		req.Req.Header.Get("Content-Type"),
+	)
 
 	fileBytes, err := os.ReadFile(name)
 	if err != nil {
-		log.error(fmt.Sprintf("failed to read file: %s | error: %s", name, err.Error()), r.handlerName)
-		r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
+		log.error(
+			fmt.Sprintf("failed to read file: %s | error: %s", name, err.Error()),
+			req.handlerName,
+		)
+		req.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
 	}
 
-	r.SetStatus(code)
-	_, err = io.Copy(r.Writer, bytes.NewReader(fileBytes))
+	_, err = io.Copy(req.Writer, bytes.NewReader(fileBytes))
 	if err != nil {
-		log.error(fmt.Sprintf("failed to copy file: %s | error: %s", name, err.Error()), r.handlerName)
-		r.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
+		log.error(
+			fmt.Sprintf("failed to copy file: %s | error: %s", name, err.Error()),
+			req.handlerName,
+		)
+		req.abortWithErr(http.StatusInternalServerError, fmt.Errorf(internalServerErr))
 	}
 }
