@@ -1,4 +1,4 @@
-package rapidRoot
+package rapidroot
 
 import (
 	"net/http"
@@ -68,26 +68,24 @@ func (r *Request) RemoveAllCookies() {
 	}
 }
 
-// New functionality for cookie handling
-
-// SetCookieWithOptions puts key-value to cookies with additional options.
+// SetCookieWithOptions puts a key-value pair into the cookies with additional options.
 func (r *Request) SetCookieWithOptions(key, val string, exp time.Time) {
-	options := &http.Cookie{}
+	cookie := &http.Cookie{
+		Name:     key,
+		Value:    val,
+		Expires:  exp,
+		HttpOnly: r.cookie.defaults.HttpOnly,
+		Secure:   r.cookie.defaults.Secure,
+		SameSite: r.cookie.defaults.SameSite,
+		Path:     r.cookie.defaults.Path,
+		Domain:   r.cookie.defaults.Domain,
+		MaxAge:   r.cookie.defaults.MaxAge,
+		Raw:      r.cookie.defaults.Raw,
+		RawExpires: r.cookie.defaults.RawExpires,
+		Unparsed: r.cookie.defaults.Unparsed,
+	}
 
-	options.Name = key
-	options.Value = val
-	options.Expires = exp
-	options.HttpOnly = r.cookie.defaults.HttpOnly
-	options.Secure = r.cookie.defaults.Secure
-	options.SameSite = r.cookie.defaults.SameSite
-	options.Path = r.cookie.defaults.Path
-	options.Domain = r.cookie.defaults.Domain
-	options.MaxAge = r.cookie.defaults.MaxAge
-	options.Raw = r.cookie.defaults.Raw
-	options.RawExpires = r.cookie.defaults.RawExpires
-	options.Unparsed = r.cookie.defaults.Unparsed
-
-	http.SetCookie(r.Writer, options)
+	http.SetCookie(r.Writer, cookie)
 }
 
 // SetDefaultCookieOptions sets default values for cookie attributes.
