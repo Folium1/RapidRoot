@@ -1,4 +1,4 @@
-package rapidRoot
+package rapidroot
 
 import (
 	"fmt"
