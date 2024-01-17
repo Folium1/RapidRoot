@@ -1,135 +1,106 @@
 # RapidRoot
 
-RapidRoot is a lightweight and flexible HTTP router library for Go. It provides a simple API to define routes, handle middleware, and manage HTTP requests and responses.
+## Overview
 
-## Getting Started
+RapidRoot is a Go package offering efficient HTTP routing capabilities for web applications. It supports various HTTP methods, dynamic routing, middleware, and more.
 
-To use RapidRoot in your Go project, follow these steps:
+## Features
 
-1. Install RapidRoot using `go get`:
+- **HTTP Methods:** Supports GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, CONNECT, TRACE.
+- **Middleware:** Route-specific and group middleware functionality.
+- **Dynamic Routing:** Handles dynamic routes with path parameters.
+- **Response Utilities:** Includes built-in methods for common HTTP responses (JSON, XML, HTML, etc.).
+- **Request and Response Wrappers:** Enhances functionality and flexibility.
+- **Cookie Management:** Secure and customizable handling of cookies.
+- **Efficient Request Pooling:** Reduces garbage collection overhead.
 
-   ```bash
-   go get github.com/Folium1/RapidRoot
-   ```
+## Installation
 
-2. Import RapidRoot in your code:
+```bash
+go get github.com/Folium1/RapidRoot
+```
 
-   ```go
-   import (
-       "fmt"
-       "net/http"
-       "strings"
-       "github.com/Folium1/RapidRoot"
-   )
-   ```
+## Basic Usage
 
-3. Create a new router instance:
-
-   ```go
-   r := RapidRoot.NewRouter()
-   ```
-
-4. Define routes using HTTP methods:
-
-   ```go
-   r.GET("/", func(req *RapidRoot.Request) {
-       req.JSON(http.StatusOK, map[string]string{"message": "Hello, RapidRoot!"})
-   })
-
-   r.POST("/users", func(req *RapidRoot.Request) {
-       // Handle POST request for creating users
-   })
-   ```
-
-5. Run the HTTP server:
-
-   ```go
-   r.Run(":8080")
-   ```
-
-## Examples
-
-### Basic Routing
+### Importing the Package
 
 ```go
-package main
+import rr "github.com/your-username/rapidroot"
+```
 
-import (
-    "fmt"
-    "net/http"
-    "github.com/Folium1/RapidRoot"
-)
+### Creating a Router
 
-func main() {
-    r := RapidRoot.NewRouter()
+```go
+router := rr.NewRouter()
+```
 
-    // Define a simple GET route
-    r.GET("/", func(req *RapidRoot.Request) {
-        req.JSON(http.StatusOK, map[string]string{"message": "Hello, RapidRoot!"})
-    })
+### Defining Routes
 
-    // Define a POST route
-    r.POST("/users", func(req *RapidRoot.Request) {
-        // Handle POST request for creating users
-    })
+```go
+router.GET("/path", handlerFunction)
+router.POST("/path", handlerFunction)
+// Repeat for other HTTP methods
+```
 
-    // Run the server on port 8080
-    r.Run(":8080")
+### Starting the Server
+
+For HTTP:
+
+```go
+router.Run(":8080")
+```
+
+For HTTPS:
+
+```go
+router.RunWithTLS(":443", "certFile", "keyFile")
+```
+
+### Handler Function
+
+```go
+func handlerFunction(req *rr.Request) {
+    // Request handling logic here
 }
 ```
 
-### Middleware
+## Middleware
+```go
+func loggingMiddleware(next rapidroot.HandlerFunc) rapidroot.HandlerFunc {
+    return func(req *rapidroot.Request) {
+        log.Printf("Request received: %s %s", req.Req.Method, req.Req.URL.Path)
+        next(req) // Call the next handler
+    }
+}
+
+```
+
+### Applying Middleware
 
 ```go
-package main
-
-import (
-    "fmt"
-    "net/http"
-    "github.com/Folium1/RapidRoot"
-)
-
-func middleware1(next RapidRoot.HandlerFunc) RapidRoot.HandlerFunc {
-    return func(req *RapidRoot.Request) {
-        fmt.Println("Executing Middleware 1")
-        next(req)
-    }
-}
-
-func middleware2(next RapidRoot.HandlerFunc) RapidRoot.HandlerFunc {
-    return func(req *RapidRoot.Request) {
-        fmt.Println("Executing Middleware 2")
-        next(req)
-    }
-}
-
-func main() {
-    r := RapidRoot.NewRouter()
-
-    // Apply middleware to all routes
-    r.MIDDLEWARE("/", middleware1, middleware2)
-
-    // Define a GET route
-    r.GET("/", func(req *RapidRoot.Request) {
-        req.JSON(http.StatusOK, map[string]string{"message": "Hello, Middleware!"})
-    })
-
-    // Run the server on port 8080
-    r.Run(":8080")
-}
+router.Middleware("GET", "/path", yourMiddlewareFunction)
 ```
-## Logging
 
-RapidRoot provides a simple logging mechanism that outputs logs to the standard output. You can customize the log output by using the `SetOutput` function.
+### Group Middleware
 
-### SetOutput(w io.Writer)
+```go
+router.GroupMiddleware("GET", "/api", middlewareFunction1, middlewareFunction2)
+```
 
-Sets the output writer for the logger.
+## Advanced Features
+
+- Custom request and response manipulation.
+- Secure and flexible cookie handling.
+- Dynamic routing with easy parameter extraction.
 
 ## Contributing
 
-If you find any issues or have suggestions for improvement, feel free to open an issue or create a pull request on the [GitHub repository](https://github.com/Folium1/RapidRoot).
+Contributions are welcome. Please adhere to Go's standard coding style and submit pull requests for any contributions.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+RapidRoot is released under the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+*Note: For detailed API documentation and advanced usage, refer to the source code comments*
