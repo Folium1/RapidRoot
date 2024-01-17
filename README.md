@@ -25,7 +25,7 @@ go get github.com/Folium1/RapidRoot
 ### Importing the Package
 
 ```go
-import rr "github.com/your-username/rapidroot"
+import rr "github.com/Folium1/RapidRoot"
 ```
 
 ### Creating a Router
