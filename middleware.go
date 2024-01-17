@@ -4,6 +4,15 @@ import "strings"
 
 type Middleware func(HandlerFunc) HandlerFunc
 
+// GroupMiddleware adds middleware to the group of routes that have the same path prefix
+// Example:
+//
+//	router := NewRouter()
+//	router.GroupMiddleware(http.MethodGet, "/api", middleware1, middleware2)
+//	router.GET("/api/users", usersHandler)
+//	router.GET("/api/users/:id", userHandler)
+//
+//	// The middleware1 and middleware2 will be applied to both usersHandler and userHandler
 func (r *Router) GroupMiddleware(method, path string, middleware ...Middleware) {
 	if len(middleware) == 0 {
 		return
@@ -26,6 +35,14 @@ func (r *Router) GroupMiddleware(method, path string, middleware ...Middleware) 
 	addMiddlewareOrGroupToTree(path, root, middleware, true)
 }
 
+// Middleware adds middleware to the route with the specified path
+// Example:
+//
+//	router := NewRouter()
+//	router.Middleware(http.MethodGet, "/api/users", middleware1, middleware2)
+//	router.GET("/api/users", usersHandler)
+//
+// The middleware1 and middleware2 will be applied to usersHandler
 func (r *Router) Middleware(method, path string, middleware ...Middleware) {
 	root := r.getOrCreateRoot(method)
 	node := getNode(path, root, nil)
