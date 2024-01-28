@@ -38,15 +38,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	reqStruct.handlerName = getFunctionName(handler)
-
-	done := make(chan struct{})
-	go func() {
-		handlerWrapper(handler, reqStruct)
-		done <- struct{}{}
-		close(done)
-	}()
-	<-done
-
+	handlerWrapper(handler, reqStruct)
 	log.logRequest(req.URL.Path, req.Method, resp.statusCode)
 }
 
